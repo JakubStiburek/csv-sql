@@ -6,7 +6,7 @@ use csv::ReaderBuilder;
 use colored::*;
 
 #[derive(Parser, Debug)]
-#[command(author = "Jakub Stibůrek", version = "0.1.0", about = "CSV -> SQL table")]
+#[command(author = "Jakub Stibůrek", version = "0.1.2", about = "CSV -> SQL table")]
 struct Args {
     #[arg(num_args(0..), required = true)]
     file_paths: Vec<String>,
