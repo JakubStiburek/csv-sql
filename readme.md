@@ -8,7 +8,7 @@ cql <csv-file> [options]
 ```
 
 ### TODO
-- [ ] Generate SQL table creation statements from CSV files
+- [x] Generate SQL table creation statements from CSV files
 - [ ] ... with headers
 - [ ] ... with headers and data types
 - [ ] ... with headers, data types and primary keys
