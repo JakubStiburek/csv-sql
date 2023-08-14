@@ -2,6 +2,10 @@
 name = "csv-sql"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+authors = ["Jakub Stibůrek"]
+repository = "https://github.com/JakubStiburek/csv-sql"
+description = "A simple CLI tool to generate SQL tables from CSV files"
 
 [dependencies]
 clap = { version = "4.3.21", features = ["derive"] }

@@ -1,5 +1,5 @@
 # CSV-SQL
-## A simple CLI tool to generate SQL table creation statements from CSV files
+## A simple CLI tool to generate SQL tables from CSV files
 
 ### Usage
 #### Generate SQL table creation statements from CSV files
