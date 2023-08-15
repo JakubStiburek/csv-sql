@@ -1,9 +1,9 @@
 use crate::prelude::*;
 
 pub fn process_csv_file(file_path: &Path) -> Result<(), Box<dyn Error>> {
-    let mut file = File::open(file_path)?;
+    let mut input_file = File::open(file_path)?;
     let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
+    input_file.read_to_string(&mut contents)?;
 
     let mut csv_reader = ReaderBuilder::new()
         .has_headers(true)
@@ -19,23 +19,31 @@ pub fn process_csv_file(file_path: &Path) -> Result<(), Box<dyn Error>> {
         records.push(record_strings);
     }
 
-    match create_table(&name, &headers, &records) {
-        Ok(_) => {}
-        Err(err) => {
-            return Err(err);
-        }
-    }
+    let mut sql = String::new();
+
+    create_table(&mut sql, &name)?;
+
+    append_inserts(&mut sql, &name, &headers, &records)?;
+
+    let mut output_file = File::create(format!("{}.sql", name))?;
+    output_file.write_all(sql.as_bytes())?;
 
     Ok(())
 }
 
-fn create_table(name: &String, headers: &Vec<String>, records: &Vec<Vec<String>>) -> Result<(), Box<dyn Error>> {
+fn create_table<'a>(sql: &'a mut String, name: &'a String) -> Result<&'a mut String, Box<dyn Error>> {
     println!("Creating table {}...", name);
 
-    let mut file = File::create(format!("{}.sql", name))?;
+    sql.push_str(&format!("CREATE TABLE {} (", name));
 
-    let mut sql = format!("CREATE TABLE {} (", name);
+    println!("Table {} created. 🚀", name.on_green());
 
+    sql.push_str(");");
+
+    Ok(sql)
+}
+
+fn append_inserts<'a>(sql: &'a mut String, name: &'a String, headers: &'a Vec<String>, records: &'a Vec<Vec<String>>) -> Result<&'a mut String, Box<dyn Error>> {
     let columns = headers.iter().map(|s| format!("{} TEXT", s)).collect::<Vec<String>>().join(", ");
 
     sql.push_str(&columns);
@@ -55,9 +63,5 @@ fn create_table(name: &String, headers: &Vec<String>, records: &Vec<Vec<String>>
         sql.push_str(&sql_record);
     }
 
-    file.write_all(sql.as_bytes())?;
-
-    println!("Table {} created. 🚀", name.on_green());
-
-    Ok(())
+    Ok(sql)
 }
