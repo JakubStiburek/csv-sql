@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let paths = args.file_paths.iter().map(|s| Path::new(s)).collect();
 
-    match validate_file_paths(paths) {
+    match validate_file_paths(&paths) {
         Ok(ok_paths) => {
             println!("These files will be processed:");
             for path in ok_paths {
@@ -46,8 +46,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    for file_path in &args.file_paths {
-        process_csv_file(Path::new(file_path))?;
+    for file_path in paths {
+        match process_csv_file(Path::new(file_path)) {
+            Ok(_) => {}
+            Err(err) => {
+                println!("Error: {}", err);
+            }
+        };
     }
 
     return Ok(());

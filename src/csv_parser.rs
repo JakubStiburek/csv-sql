@@ -19,7 +19,12 @@ pub fn process_csv_file(file_path: &Path) -> Result<(), Box<dyn Error>> {
         records.push(record_strings);
     }
 
-    create_table(&name, &headers, &records)?;
+    match create_table(&name, &headers, &records) {
+        Ok(_) => {}
+        Err(err) => {
+            return Err(err);
+        }
+    }
 
     Ok(())
 }

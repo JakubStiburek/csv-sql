@@ -9,7 +9,7 @@ fn path_to_string(path: &Path) -> String {
 }
 
 
-pub fn validate_file_paths(paths: Vec<&Path>) -> Result<Vec<String>, (Vec<String>, Vec<String>)> {
+pub fn validate_file_paths(paths: &Vec<&Path>) -> Result<Vec<String>, (Vec<String>, Vec<String>)> {
     let mut ok_paths: Vec<String> = vec![];
     let mut errors: Vec<String> = vec![];
 
