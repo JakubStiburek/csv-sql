@@ -14,6 +14,22 @@ csv-sql [FILE_PATHS]...
 csv-sql --help
 ```
 
+### Development
+Use [just](https://github.com/casey/just) for easy development.
+#### See all available commands
+```bash
+just -l
+``` 
+#### Build and run
+```bash
+just run ~/Dir/file.csv
+just run "~/Dir/file.csv ~/Dir/file2.csv ~/Dir/file3.csv"
+```
+#### Clear the all *.sql files in current directory
+```bash
+just clear
+```
+
 ### TODO
 - [x] Generate SQL table creation statements from CSV files with headers and TEXT data types
 - [ ] ... without headers
