@@ -1,7 +1,33 @@
 use crate::prelude::*;
 
-pub fn process_csv_file(file_path: &Path) -> Result<(), Box<dyn Error>> {
-    let mut input_file = File::open(file_path)?;
+pub enum Mode {
+    NoHeaders,
+    Headers,
+}
+
+pub struct Config<'a> {
+    pub mode: Mode,
+    pub name: String,
+    pub file_path: &'a Path,
+}
+
+impl Config<'_> {
+    pub fn new(mode: Mode, name: Option<String>, file_path: &Path) -> Config {
+        let name = match name {
+            Some(name) => name,
+            None => file_path.file_stem().unwrap().to_str().unwrap().to_string(),
+        };
+
+        Config {
+            mode,
+            name,
+            file_path,
+        }
+    }
+}
+
+pub fn process_csv_file(config: Config) -> Result<(), Box<dyn Error>> {
+    let mut input_file = File::open(config.file_path)?;
     let mut contents = String::new();
     input_file.read_to_string(&mut contents)?;
 
@@ -9,7 +35,6 @@ pub fn process_csv_file(file_path: &Path) -> Result<(), Box<dyn Error>> {
         .has_headers(true)
         .from_reader(contents.as_bytes());
 
-    let name = file_path.file_stem().unwrap().to_str().unwrap().to_string();
     let headers = csv_reader.headers()?.iter().map(|s| s.to_string()).collect();
     let mut records: Vec<Vec<String>> = vec![];
 
@@ -21,22 +46,23 @@ pub fn process_csv_file(file_path: &Path) -> Result<(), Box<dyn Error>> {
 
     let mut sql = String::new();
 
-    create_table(&mut sql, &name)?;
+    println!("Creating table {}...", &config.name);
 
-    append_inserts(&mut sql, &name, &headers, &records)?;
+    create_table(&mut sql, &config.name)?;
 
-    let mut output_file = File::create(format!("{}.sql", name))?;
+    append_inserts(&mut sql, &config.name, &headers, &records)?;
+
+    println!("Table {} created. 🚀", &config.name.on_green());
+
+    let mut output_file = File::create(format!("{}.sql", config.name))?;
     output_file.write_all(sql.as_bytes())?;
 
     Ok(())
 }
 
 fn create_table<'a>(sql: &'a mut String, name: &'a String) -> Result<&'a mut String, Box<dyn Error>> {
-    println!("Creating table {}...", name);
 
     sql.push_str(&format!("CREATE TABLE {} (", name));
-
-    println!("Table {} created. 🚀", name.on_green());
 
     sql.push_str(");");
 
@@ -60,6 +86,7 @@ fn append_inserts<'a>(sql: &'a mut String, name: &'a String, headers: &'a Vec<St
         sql_record.push_str(");");
 
         sql.push_str("\n");
+
         sql.push_str(&sql_record);
     }
 

@@ -20,11 +20,18 @@ use prelude::*;
 struct Args {
     #[arg(num_args(0..), required = true)]
     file_paths: Vec<String>,
+
+    #[arg(short, long)]
+    names: Option<String>,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let paths = args.file_paths.iter().map(|s| Path::new(s)).collect();
+    let names = match &args.names {
+        Some(arg_names) => arg_names.split(",").collect::<Vec<&str>>(),
+        None => vec![],
+    };
 
     match validate_file_paths(&paths) {
         Ok(ok_paths) => {
@@ -46,8 +53,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    for file_path in paths {
-        match process_csv_file(Path::new(file_path)) {
+    for (i, file_path) in paths.iter().enumerate() {
+        let name = match &names.get(i) {
+            Some(name) => Some(name.to_string()),
+            None => None,
+        };
+
+        match process_csv_file(Config::new(Mode::Headers, name, file_path)) {
             Ok(_) => {}
             Err(err) => {
                 println!("Error: {}", err);
