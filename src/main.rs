@@ -1,4 +1,5 @@
 mod csv_parser;
+mod args_validation;
 
 mod prelude {
     pub use clap::Parser;
@@ -8,6 +9,7 @@ mod prelude {
     pub use csv::ReaderBuilder;
     pub use colored::*;
     pub use crate::csv_parser::*;
+    pub use crate::args_validation::*;
 }
 
 use prelude::*;
@@ -22,8 +24,9 @@ struct Args {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
+    let paths = args.file_paths.iter().map(|s| Path::new(s)).collect();
 
-    match validate_args(&args) {
+    match validate_file_paths(paths) {
         Ok(ok_paths) => {
             println!("These files will be processed:");
             for path in ok_paths {
@@ -49,37 +52,3 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     return Ok(());
 }
-
-fn is_csv_file(file_path: &Path) -> bool {
-    file_path.extension().map_or(false, |ext| ext == "csv")
-}
-
-
-fn validate_args(args: &Args) -> Result<Vec<String>, (Vec<String>, Vec<String>)> {
-    let mut ok_paths: Vec<String> = vec![];
-    let mut errors: Vec<String> = vec![];
-
-    for path in &args.file_paths {
-        if let Ok(metadata) = fs::metadata(path) {
-            if metadata.is_file() {
-                if is_csv_file(Path::new(path)) {
-                    ok_paths.push(format!("{}", path.on_green()));
-                } else {
-                    errors.push(format!("{} - not a CSV file", path.on_red()));
-                }
-            } else {
-                errors.push(format!("{} - not a file", path.on_red()));
-            }
-        } else {
-            errors.push(format!("{} - invalid file path", path.on_red()));
-        }
-    }
-
-    if errors.len() > 0 {
-        return Err((ok_paths, errors));
-    }
-
-    return Ok(ok_paths);
-}
-
-
