@@ -46,13 +46,13 @@ pub fn process_csv_file(config: Config) -> Result<(), Box<dyn Error>> {
 
     let mut sql = String::new();
 
-    println!("Creating table {}...", &config.name);
+    eprintln!("Creating table {}...", &config.name);
 
     create_table(&mut sql, &config.name)?;
 
     append_inserts(&mut sql, &config.name, &headers, &records)?;
 
-    println!("Table {} created. 🚀", &config.name.on_green());
+    eprintln!("Table {} created. 🚀", &config.name.on_green());
 
     let mut output_file = File::create(format!("{}.sql", config.name))?;
     output_file.write_all(sql.as_bytes())?;

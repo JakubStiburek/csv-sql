@@ -35,20 +35,20 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     match validate_file_paths(&paths) {
         Ok(ok_paths) => {
-            println!("These files will be processed:");
+            eprintln!("These files will be processed:");
             for path in ok_paths {
-                println!("{}", path);
+                eprintln!("{}", path);
             }
         }
         Err(res) => {
-            println!("Invalid input:");
+            eprintln!("Invalid input:");
             for error in res.1 {
-                println!("{}", error);
+                eprintln!("{}", error);
             }
             for ok_path in res.0 {
-                println!("{}", "-".repeat(50));
-                println!("Valid input:");
-                println!("{}", ok_path);
+                eprintln!("{}", "-".repeat(50));
+                eprintln!("Valid input:");
+                eprintln!("{}", ok_path);
             }
         }
     }
@@ -62,7 +62,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         match process_csv_file(Config::new(Mode::Headers, name, file_path)) {
             Ok(_) => {}
             Err(err) => {
-                println!("Error: {}", err);
+                eprintln!("Error: {}", err);
             }
         };
     }
