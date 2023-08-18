@@ -147,11 +147,12 @@ dependencies = [
 
 [[package]]
 name = "csv-sql"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "clap",
  "colored",
  "csv",
+ "exitcode",
 ]
 
 [[package]]
@@ -174,6 +175,12 @@ dependencies = [
  "cc",
  "libc",
 ]
+
+[[package]]
+name = "exitcode"
+version = "1.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de853764b47027c2e862a995c34978ffa63c1501f2e15f987ba11bd4f9bba193"
 
 [[package]]
 name = "heck"

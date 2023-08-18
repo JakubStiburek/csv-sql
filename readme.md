@@ -1,18 +1,21 @@
 # CSV-SQL
 ## A simple CLI tool to generate SQL tables from CSV files
 
-- CSV-SQL will generate SQL table creation statements from CSV files, currently with headers and TEXT data types only.
+- CSV-SQL will generate SQL table creation statements from CSV files, currently with TEXT data types only.
+- CSV-SQL outputs to stdout. You can redirect the output to a file.
 
 ### Usage
 #### Generate SQL table creation statements from CSV files
-- The name of the CSV file will be used as the name of the table and the file.
+- The name of the CSV file will be used as the name of the table.
 ```bash
 csv-sql [FILE_PATHS]...
 ```
-#### Override default name of the table and the file
+
+#### Generate only the schema without inserting data
 ```bash
-csv-sql [FILE_PATHS]... --names=[name],[name],[name]...
+csv-sql --schema-only [FILE_PATHS]...
 ```
+
 #### See all options
 ```bash
 csv-sql --help
@@ -27,19 +30,24 @@ just -l
 #### Build and run
 ```bash
 just run ~/Dir/file.csv
-just run "~/Dir/file.csv ~/Dir/file2.csv ~/Dir/file3.csv"
+just run "--schema-only ~/Dir/file.csv ~/Dir/file2.csv ~/Dir/file3.csv"
 ```
-#### Clear the all *.sql files in current directory
+#### Clear all *.sql files in current directory
 ```bash
 just clear
 ```
 
 ### TODO
 - [x] Generate SQL table creation statements from CSV files with headers and TEXT data types
-- [x] Override default name of the table
-- [ ] ... without headers
-- [ ] ... with headers and data types
-- [ ] ... with headers, data types and primary keys
-- [ ] ... with headers, data types, primary keys and constraints
-- [ ] ... with headers, data types, primary keys, constraints and foreign keys
+- [x] Output to stdout
+- [x] Schema only without inserting data
 - [ ] merge multiple CSV files into one SQL table
+- [ ] Automatic data type detection
+- [ ] Custom data types
+- [ ] Primary keys
+- [ ] Constraints
+- [ ] Foreign keys
+
+### Contact
+- [Email: jakub@stiburek.dev](mailto:jakub@stiburek.dev)
+- [LI: Jakub Stiburek](https://www.linkedin.com/in/jakubstiburekdev/)

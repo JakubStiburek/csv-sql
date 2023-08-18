@@ -1,32 +1,27 @@
 use crate::prelude::*;
 
-pub enum Mode {
-    NoHeaders,
-    Headers,
+#[derive(PartialEq)]
+pub enum ConfigOption {
+    SchemaOnly
 }
 
 pub struct Config<'a> {
-    pub mode: Mode,
+    pub options: &'a Vec<ConfigOption>,
     pub name: String,
     pub file_path: &'a Path,
 }
 
 impl Config<'_> {
-    pub fn new(mode: Mode, name: Option<String>, file_path: &Path) -> Config {
-        let name = match name {
-            Some(name) => name,
-            None => file_path.file_stem().unwrap().to_str().unwrap().to_string(),
-        };
-
+    pub fn new<'a>(options: &'a Vec<ConfigOption>, file_path: &'a Path) -> Config<'a> {
         Config {
-            mode,
-            name,
+            options,
+            name: file_path.file_stem().unwrap().to_str().unwrap().to_string(),
             file_path,
         }
     }
 }
 
-pub fn process_csv_file(config: Config) -> Result<(), Box<dyn Error>> {
+pub fn process_csv_file(config: Config) -> Result<String, Box<dyn Error>> {
     let mut input_file = File::open(config.file_path)?;
     let mut contents = String::new();
     input_file.read_to_string(&mut contents)?;
@@ -46,36 +41,31 @@ pub fn process_csv_file(config: Config) -> Result<(), Box<dyn Error>> {
 
     let mut sql = String::new();
 
-    eprintln!("Creating table {}...", &config.name);
+    create_table(&mut sql, &config.name, &headers)?;
 
-    create_table(&mut sql, &config.name)?;
+    if config.options.contains(&ConfigOption::SchemaOnly) {
+        return Ok(sql);
+    }
 
-    append_inserts(&mut sql, &config.name, &headers, &records)?;
-
-    eprintln!("Table {} created. 🚀", &config.name.on_green());
-
-    let mut output_file = File::create(format!("{}.sql", config.name))?;
-    output_file.write_all(sql.as_bytes())?;
-
-    Ok(())
-}
-
-fn create_table<'a>(sql: &'a mut String, name: &'a String) -> Result<&'a mut String, Box<dyn Error>> {
-
-    sql.push_str(&format!("CREATE TABLE {} (", name));
-
-    sql.push_str(");");
+    append_inserts(&mut sql, &config.name, &records)?;
 
     Ok(sql)
 }
 
-fn append_inserts<'a>(sql: &'a mut String, name: &'a String, headers: &'a Vec<String>, records: &'a Vec<Vec<String>>) -> Result<&'a mut String, Box<dyn Error>> {
+fn create_table<'a>(sql: &'a mut String, name: &'a String, headers: &'a Vec<String>) -> Result<&'a mut String, Box<dyn Error>> {
+
+    sql.push_str(&format!("CREATE TABLE {} (", name));
+
     let columns = headers.iter().map(|s| format!("{} TEXT", s)).collect::<Vec<String>>().join(", ");
 
     sql.push_str(&columns);
 
     sql.push_str(");");
 
+    Ok(sql)
+}
+
+fn append_inserts<'a>(sql: &'a mut String, name: &'a String, records: &'a Vec<Vec<String>>) -> Result<&'a mut String, Box<dyn Error>> {
     for record in records {
         let mut sql_record = format!("INSERT INTO {} VALUES (", name);
 

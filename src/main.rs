@@ -10,36 +10,37 @@ mod prelude {
     pub use colored::*;
     pub use crate::csv_parser::*;
     pub use crate::args_validation::*;
+    pub use std::io::stdout;
+    pub use std::process::exit;
+    pub use exitcode;
 }
 
 use prelude::*;
 
 
 #[derive(Parser, Debug)]
-#[command(author = "Jakub Stibůrek", version = "0.1.2", about = "CSV -> SQL table")]
+#[command(author = "Jakub Stibůrek", version = "0.2.0", about = "CSV -> SQL table")]
 struct Args {
     #[arg(num_args(0..), required = true)]
     file_paths: Vec<String>,
 
-    #[arg(short, long)]
-    names: Option<String>,
+    #[arg(long)]
+    schema_only: bool,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let paths = args.file_paths.iter().map(|s| Path::new(s)).collect();
-    let names = match &args.names {
-        Some(arg_names) => arg_names.split(",").collect::<Vec<&str>>(),
-        None => vec![],
-    };
+    let mut options: Vec<ConfigOption> = vec![];
+    let schema_only = if args.schema_only { Some(ConfigOption::SchemaOnly) } else { None };
+
+    if let Some(option) = schema_only {
+        options.push(option);
+    }
+
 
     match validate_file_paths(&paths) {
-        Ok(ok_paths) => {
-            eprintln!("These files will be processed:");
-            for path in ok_paths {
-                eprintln!("{}", path);
-            }
-        }
+        Ok(_) => {}
         Err(res) => {
             eprintln!("Invalid input:");
             for error in res.1 {
@@ -50,22 +51,21 @@ fn main() -> Result<(), Box<dyn Error>> {
                 eprintln!("Valid input:");
                 eprintln!("{}", ok_path);
             }
+            exit(exitcode::DATAERR);
         }
     }
 
-    for (i, file_path) in paths.iter().enumerate() {
-        let name = match &names.get(i) {
-            Some(name) => Some(name.to_string()),
-            None => None,
-        };
-
-        match process_csv_file(Config::new(Mode::Headers, name, file_path)) {
-            Ok(_) => {}
+    for file_path in paths {
+        match process_csv_file(Config::new(&options, file_path)) {
+            Ok(sql) => {
+                stdout().write_all(sql.as_bytes())?;
+            }
             Err(err) => {
                 eprintln!("Error: {}", err);
+                exit(exitcode::DATAERR);
             }
         };
     }
 
-    return Ok(());
+    Ok(())
 }
