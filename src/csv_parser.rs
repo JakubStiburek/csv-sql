@@ -1,8 +1,40 @@
 use crate::prelude::*;
 
+#[derive(PartialEq, Debug, Parser)]
+pub enum SerialSize {
+    SmallInt,
+    Integer,
+    BigInt,
+}
+
+impl FromStr for SerialSize {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "smallint" => Ok(SerialSize::SmallInt),
+            "integer" => Ok(SerialSize::Integer),
+            "bigint" => Ok(SerialSize::BigInt),
+            _ => Err(format!("Invalid serial size: {}", s)),
+        }
+    }
+}
+
+#[derive(PartialEq)]
+pub struct PrimarySerial {
+    size: SerialSize,
+}
+
+impl PrimarySerial {
+    pub fn new(size: SerialSize) -> PrimarySerial {
+        PrimarySerial { size }
+    }
+}
+
 #[derive(PartialEq)]
 pub enum ConfigOption {
-    SchemaOnly
+    SchemaOnly,
+    PrimaryKey(PrimarySerial),
 }
 
 pub struct Config<'a> {
@@ -41,20 +73,34 @@ pub fn process_csv_file(config: Config) -> Result<String, Box<dyn Error>> {
 
     let mut sql = String::new();
 
-    create_table(&mut sql, &config.name, &headers)?;
+    let primary_serial = config.options.iter().find_map(|option| {
+        match option {
+            ConfigOption::PrimaryKey(serial) => Some(serial),
+            _ => None,
+        }
+    });
+
+    create_table(&mut sql, &config.name, &headers, primary_serial)?;
 
     if config.options.contains(&ConfigOption::SchemaOnly) {
         return Ok(sql);
     }
 
-    append_inserts(&mut sql, &config.name, &records)?;
+    append_inserts(&mut sql, &config.name, &records, &headers)?;
 
     Ok(sql)
 }
 
-fn create_table<'a>(sql: &'a mut String, name: &'a String, headers: &'a Vec<String>) -> Result<&'a mut String, Box<dyn Error>> {
-
+fn create_table<'a>(sql: &'a mut String, name: &'a String, headers: &'a Vec<String>, primary_serial: Option<&'a PrimarySerial>) -> Result<&'a mut String, Box<dyn Error>> {
     sql.push_str(&format!("CREATE TABLE {} (", name));
+
+    if let Some(PrimarySerial { size }) = primary_serial {
+        sql.push_str(&format!("id {} PRIMARY KEY, ", match size {
+            SerialSize::SmallInt => "SMALLSERIAL",
+            SerialSize::Integer => "SERIAL",
+            SerialSize::BigInt => "BIGSERIAL",
+        }));
+    }
 
     let columns = headers.iter().map(|s| format!("{} TEXT", s)).collect::<Vec<String>>().join(", ");
 
@@ -65,9 +111,11 @@ fn create_table<'a>(sql: &'a mut String, name: &'a String, headers: &'a Vec<Stri
     Ok(sql)
 }
 
-fn append_inserts<'a>(sql: &'a mut String, name: &'a String, records: &'a Vec<Vec<String>>) -> Result<&'a mut String, Box<dyn Error>> {
+fn append_inserts<'a>(sql: &'a mut String, name: &'a String, records: &'a Vec<Vec<String>>, headers: &'a Vec<String>) -> Result<&'a mut String, Box<dyn Error>> {
     for record in records {
-        let mut sql_record = format!("INSERT INTO {} VALUES (", name);
+        let columns = headers.iter().map(|s| format!("{}", s)).collect::<Vec<String>>().join(", ");
+
+        let mut sql_record = format!("INSERT INTO {} ({}) VALUES (", name, columns);
 
         let values = record.iter().map(|s| format!("'{}'", s)).collect::<Vec<String>>().join(", ");
 

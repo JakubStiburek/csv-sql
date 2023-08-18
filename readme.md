@@ -29,8 +29,8 @@ just -l
 ``` 
 #### Build and run
 ```bash
-just run ~/Dir/file.csv
-just run "--schema-only ~/Dir/file.csv ~/Dir/file2.csv ~/Dir/file3.csv"
+just dev ~/Dir/file.csv
+just dev "--schema-only ~/Dir/file.csv ~/Dir/file2.csv ~/Dir/file3.csv"
 ```
 #### Clear all *.sql files in current directory
 ```bash
@@ -45,6 +45,8 @@ just clear
 - [ ] Automatic data type detection
 - [ ] Custom data types
 - [ ] Primary keys
+  - [x] Auto increment
+  - [ ] Custom
 - [ ] Constraints
 - [ ] Foreign keys
 

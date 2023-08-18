@@ -13,19 +13,23 @@ mod prelude {
     pub use std::io::stdout;
     pub use std::process::exit;
     pub use exitcode;
+    pub use std::str::FromStr;
 }
 
 use prelude::*;
 
 
 #[derive(Parser, Debug)]
-#[command(author = "Jakub Stibůrek", version = "0.2.0", about = "CSV -> SQL table")]
+#[command(author = "Jakub Stibůrek", version = "0.3.0", about = "CSV -> SQL table")]
 struct Args {
     #[arg(num_args(0..), required = true)]
     file_paths: Vec<String>,
 
     #[arg(long)]
     schema_only: bool,
+
+    #[arg(short, long, value_names(&["smallint|integer|bigint"]))]
+    primary_key: Option<String>,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -33,6 +37,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     let paths = args.file_paths.iter().map(|s| Path::new(s)).collect();
     let mut options: Vec<ConfigOption> = vec![];
     let schema_only = if args.schema_only { Some(ConfigOption::SchemaOnly) } else { None };
+    if let Some(primary_key) = args.primary_key {
+        match SerialSize::from_str(&primary_key) {
+            Ok(size) => options.push(ConfigOption::PrimaryKey(PrimarySerial::new(size))),
+            Err(err) => {
+                eprintln!("Invalid primary key size: {}", err);
+                exit(exitcode::DATAERR);
+            }
+        }
+    }
 
     if let Some(option) = schema_only {
         options.push(option);
