@@ -14,6 +14,7 @@ mod prelude {
     pub use std::process::exit;
     pub use exitcode;
     pub use std::str::FromStr;
+    pub use std::path::PathBuf;
 }
 
 use prelude::*;
@@ -22,13 +23,13 @@ use prelude::*;
 #[derive(Parser, Debug)]
 #[command(author = "Jakub Stibůrek", version = "0.3.0", about = "CSV -> SQL table")]
 struct Args {
-    #[arg(num_args(0..), required = true)]
-    file_paths: Vec<String>,
+    #[arg(num_args(0..), required = true, help = "Input CSV file(s)")]
+    file_paths: Vec<PathBuf>,
 
-    #[arg(long)]
+    #[arg(short, long, help = "Generate only schema without inserts")]
     schema_only: bool,
 
-    #[arg(short, long, value_names(&["smallint|integer|bigint"]))]
+    #[arg(short, long, value_names(&["smallint|integer|bigint"]), help = "Generate primary key 'id' column with serial type")]
     primary_key: Option<String>,
 }
 
