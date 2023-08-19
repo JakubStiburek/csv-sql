@@ -38,6 +38,17 @@ pub enum ConfigOption {
     Merge,
 }
 
+struct ReadFile {
+    headers: Vec<String>,
+    records: Vec<Vec<String>>,
+}
+
+impl ReadFile {
+    fn new(headers: Vec<String>, records: Vec<Vec<String>>) -> ReadFile {
+        ReadFile { headers, records }
+    }
+}
+
 pub struct Config<'a> {
     pub options: &'a Vec<ConfigOption>,
     pub name: String,
@@ -55,24 +66,7 @@ impl Config<'_> {
 }
 
 pub fn process_csv_file(config: Config) -> Result<String, Box<dyn Error>> {
-    let mut input_file = File::open(config.file_path)?;
-    let mut contents = String::new();
-    input_file.read_to_string(&mut contents)?;
-
-    let mut csv_reader = ReaderBuilder::new()
-        .has_headers(true)
-        .from_reader(contents.as_bytes());
-
-    let headers = csv_reader.headers()?.iter().map(|s| s.to_string()).collect();
-    let mut records: Vec<Vec<String>> = vec![];
-
-    for record in csv_reader.records() {
-        let record = record?;
-        let record_strings: Vec<String> = record.iter().map(|field| field.to_string()).collect();
-        records.push(record_strings);
-    }
-
-    let mut sql = String::new();
+    let ReadFile { headers, records } = read_file(config.file_path)?;
 
     let primary_serial = config.options.iter().find_map(|option| {
         match option {
@@ -81,18 +75,81 @@ pub fn process_csv_file(config: Config) -> Result<String, Box<dyn Error>> {
         }
     });
 
-    create_table(&mut sql, &config.name, &headers, primary_serial)?;
+    match create_table(&config.name, &headers, primary_serial) {
+        Ok(sql) => {
+            if config.options.contains(&ConfigOption::SchemaOnly) {
+                return Ok(sql);
+            }
 
-    if config.options.contains(&ConfigOption::SchemaOnly) {
-        return Ok(sql);
+            let inserts = append_inserts(&config.name, &records, &headers)?;
+
+            Ok(sql + &inserts)
+        }
+        Err(err) => Err(err),
     }
-
-    append_inserts(&mut sql, &config.name, &records, &headers)?;
-
-    Ok(sql)
 }
 
-fn create_table<'a>(sql: &'a mut String, name: &'a String, headers: &'a Vec<String>, primary_serial: Option<&'a PrimarySerial>) -> Result<&'a mut String, Box<dyn Error>> {
+pub fn process_csv_files(config: Config, file_paths: Vec<&Path>) -> Result<String, Box<dyn Error>> {
+    let primary_serial = config.options.iter().find_map(|option| {
+        match option {
+            ConfigOption::PrimaryKey(serial) => Some(serial),
+            _ => None,
+        }
+    });
+    let mut all_headers: Vec<String> = vec![];
+    let mut all_records: Vec<Vec<Vec<String>>> = vec![];
+
+    for path in file_paths {
+        let ReadFile { headers, records } = read_file(path)?;
+
+        all_headers.extend(headers);
+        all_records.push(records);
+    }
+
+    match create_table(&config.name, &all_headers, primary_serial){
+        Ok(sql) => {
+            if config.options.contains(&ConfigOption::SchemaOnly) {
+                return Ok(sql);
+            }
+
+            let merged_records = merge_records(all_records);
+
+            let inserts = append_inserts(&config.name, &merged_records, &all_headers)?;
+
+            Ok(sql + &inserts)
+        },
+        Err(err) => Err(err),
+
+    }
+}
+
+fn merge_records(records: Vec<Vec<Vec<String>>>) -> Vec<Vec<String>> {
+    let mut merged_records: Vec<Vec<String>> = Vec::new();
+
+    if let Some(max_len) = records.iter().map(|inner| inner.len()).max() {
+        for i in 0..max_len {
+            let mut merged_row: Vec<String> = Vec::new();
+
+            for inner in &records {
+                let row = if i < inner.len() {
+                    inner[i].clone()
+                } else {
+                    vec![String::new(); inner[0].len()]
+                };
+
+                merged_row.extend(row);
+            }
+
+            merged_records.push(merged_row);
+        }
+    }
+
+    merged_records
+}
+
+fn create_table<'a>(name: &'a String, headers: &'a Vec<String>, primary_serial: Option<&'a PrimarySerial>) -> Result<String, Box<dyn Error>> {
+    let mut sql = String::new();
+
     sql.push_str(&format!("CREATE TABLE {} (", name));
 
     if let Some(PrimarySerial { size }) = primary_serial {
@@ -112,7 +169,9 @@ fn create_table<'a>(sql: &'a mut String, name: &'a String, headers: &'a Vec<Stri
     Ok(sql)
 }
 
-fn append_inserts<'a>(sql: &'a mut String, name: &'a String, records: &'a Vec<Vec<String>>, headers: &'a Vec<String>) -> Result<&'a mut String, Box<dyn Error>> {
+fn append_inserts<'a>(name: &'a String, records: &'a Vec<Vec<String>>, headers: &'a Vec<String>) -> Result<String, Box<dyn Error>> {
+    let mut sql = String::new();
+
     for record in records {
         let columns = headers.iter().map(|s| format!("{}", s)).collect::<Vec<String>>().join(", ");
 
@@ -130,4 +189,25 @@ fn append_inserts<'a>(sql: &'a mut String, name: &'a String, records: &'a Vec<Ve
     }
 
     Ok(sql)
+}
+
+fn read_file(file_path: &Path) -> Result<ReadFile, Box<dyn Error>> {
+    let mut input_file = File::open(file_path)?;
+    let mut contents = String::new();
+    input_file.read_to_string(&mut contents)?;
+
+    let mut csv_reader = ReaderBuilder::new()
+        .has_headers(true)
+        .from_reader(contents.as_bytes());
+
+    let headers = csv_reader.headers()?.iter().map(|s| s.to_string()).collect();
+    let mut records: Vec<Vec<String>> = vec![];
+
+    for record in csv_reader.records() {
+        let record = record?;
+        let record_strings: Vec<String> = record.iter().map(|field| field.to_string()).collect();
+        records.push(record_strings);
+    };
+
+    Ok(ReadFile::new(headers, records))
 }

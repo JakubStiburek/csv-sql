@@ -41,7 +41,7 @@ struct Args {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
-    let paths = args.file_paths.iter().map(|s| Path::new(s)).collect();
+    let paths: Vec<&Path> = args.file_paths.iter().map(|s| Path::new(s)).collect();
     let mut options: Vec<ConfigOption> = vec![];
     let schema_only = if args.schema_only { Some(ConfigOption::SchemaOnly) } else { None };
     let merge = if args.merge { Some(ConfigOption::Merge) } else { None };
@@ -68,7 +68,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         options.push(option);
     }
 
-
     match validate_file_paths(&paths) {
         Ok(_) => {}
         Err(res) => {
@@ -83,6 +82,19 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
             exit(exitcode::DATAERR);
         }
+    }
+
+    if options.contains(&ConfigOption::Merge) {
+        match process_csv_files(Config::new(&options, &paths[0]), paths) {
+            Ok(sql) => {
+                stdout().write_all(sql.as_bytes())?;
+            }
+            Err(err) => {
+                eprintln!("Error: {}", err);
+                exit(exitcode::DATAERR);
+            }
+        };
+        return Ok(());
     }
 
     for file_path in paths {

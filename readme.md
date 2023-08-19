@@ -16,6 +16,23 @@ csv-sql [FILE_PATHS]...
 csv-sql --schema-only [FILE_PATHS]...
 ```
 
+#### Add a serial primary key
+```bash
+csv-sql --primary-key=smallint [FILE_PATHS]...
+csv-sql --primary-key=integer [FILE_PATHS]...
+csv-sql --primary-key=bigint [FILE_PATHS]...
+```
+
+#### Merge multiple tables into one
+```bash
+csv-sql --merge [FILE_PATHS]...
+```
+
+#### Redirect output to a file
+```bash
+csv-sql [FILE_PATHS]... > output.sql
+```
+
 #### See all options
 ```bash
 csv-sql --help
@@ -41,7 +58,7 @@ just clear
 - [x] Generate SQL table creation statements from CSV files with headers and TEXT data types
 - [x] Output to stdout
 - [x] Schema only without inserting data
-- [ ] merge multiple CSV files into one SQL table
+- [x] merge multiple CSV files into one SQL table
 - [ ] Automatic data type detection
 - [ ] Custom data types
 - [ ] Primary keys
