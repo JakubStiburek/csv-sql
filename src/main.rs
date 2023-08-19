@@ -21,7 +21,7 @@ use prelude::*;
 
 
 #[derive(Parser, Debug)]
-#[command(author = "Jakub Stibůrek", version = "0.3.0", about = "CSV -> SQL table")]
+#[command(author = "Jakub Stibůrek", version = "0.4.0", about = "CSV -> SQL table")]
 struct Args {
     // arguments
     #[arg(num_args(0..), required = true, help = "Input CSV file(s)")]
