@@ -23,12 +23,18 @@ use prelude::*;
 #[derive(Parser, Debug)]
 #[command(author = "Jakub Stibůrek", version = "0.3.0", about = "CSV -> SQL table")]
 struct Args {
+    // arguments
     #[arg(num_args(0..), required = true, help = "Input CSV file(s)")]
     file_paths: Vec<PathBuf>,
 
+    // flags
     #[arg(short, long, help = "Generate only schema without inserts")]
     schema_only: bool,
 
+    #[arg(short, long, help = "Merge all input files into one table")]
+    merge: bool,
+
+    // options
     #[arg(short, long, value_names(&["smallint|integer|bigint"]), help = "Generate primary key 'id' column with serial type")]
     primary_key: Option<String>,
 }
@@ -38,6 +44,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let paths = args.file_paths.iter().map(|s| Path::new(s)).collect();
     let mut options: Vec<ConfigOption> = vec![];
     let schema_only = if args.schema_only { Some(ConfigOption::SchemaOnly) } else { None };
+    let merge = if args.merge { Some(ConfigOption::Merge) } else { None };
+
     if let Some(primary_key) = args.primary_key {
         match SerialSize::from_str(&primary_key) {
             Ok(size) => options.push(ConfigOption::PrimaryKey(PrimarySerial::new(size))),
@@ -49,6 +57,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     if let Some(option) = schema_only {
+        options.push(option);
+    }
+
+    if let Some(option) = merge {
+        if paths.len() < 2 {
+            eprintln!("Merge option requires at least two input files");
+            exit(exitcode::DATAERR);
+        }
         options.push(option);
     }
 

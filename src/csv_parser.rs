@@ -35,6 +35,7 @@ impl PrimarySerial {
 pub enum ConfigOption {
     SchemaOnly,
     PrimaryKey(PrimarySerial),
+    Merge,
 }
 
 pub struct Config<'a> {
